@@ -11,6 +11,8 @@ from .constants import Region
 from .interfaces import BlueLinkyConfig, Brand
 from .logger import logger
 
+from .cli import main as cli_main
+
 
 ENV_VARS = {
    "username": "BLUELINKY_USERNAME",
@@ -108,4 +110,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-   main()
+   raise SystemExit(cli_main())

@@ -21,14 +21,14 @@ class Vehicle:
       self.vehicle_config = vehicle_config
       self.controller = controller
       self.user_config: BlueLinkyConfig = getattr(controller, "user_config")
-      self._locked = True
+      self._locked = False
       self._engine_on = False
       self._status: Optional[VehicleStatus] = None
       self._full_status: Optional[FullVehicleStatus] = None
       self._location: Optional[VehicleLocation] = None
       self._odometer: Optional[VehicleOdometer] = None
 
-   def status(self, input: VehicleStatusOptions) -> Optional[VehicleStatus | RawVehicleStatus]:
+   def status(self, input: Optional[VehicleStatusOptions] = None) -> Optional[VehicleStatus | RawVehicleStatus]:
       if self._status is None or input.refresh:
          self._status = VehicleStatus(
             engine_on=self._engine_on,
@@ -38,7 +38,7 @@ class Vehicle:
          )
       return self._status
 
-   def full_status(self, input: VehicleStatusOptions) -> Optional[FullVehicleStatus]:
+   def full_status(self, input: Optional[VehicleStatusOptions] = None) -> Optional[FullVehicleStatus]:
       if self._full_status is None or input.refresh:
          self._full_status = FullVehicleStatus(payload={"vin": self.vin()})
       return self._full_status
@@ -51,7 +51,7 @@ class Vehicle:
       self._locked = True
       return "locked"
 
-   def start(self, config: VehicleStartOptions) -> str:
+   def start(self, config: Optional[VehicleStartOptions] = None) -> str:
       self._engine_on = True
       self._status = VehicleStatus(
          engine_on=True,
