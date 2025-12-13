@@ -8,11 +8,14 @@ version = "0.0.1"
 description = "Unofficial Hyundai Bluelink client written in Python"
 authors = [{name = "Hacksore"}]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = ["requests>=2.28"]
 
 [project.urls]
 Homepage = "https://github.com/Hacksore/bluelinky"
 
 [tool.setuptools]
-packages = ["bluelinky", "bluelinky.controllers", "bluelinky.vehicles"]
+package-dir = {"" = "py-src"}
+
+[tool.setuptools.packages.find]
+where = ["py-src"]

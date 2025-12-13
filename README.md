@@ -15,19 +15,21 @@ from bluelinky import BlueLinky, Region
 from bluelinky.interfaces import BlueLinkyConfig
 
 config = BlueLinkyConfig(
-    username="someguy@example.com",
-    password="hunter1",
-    brand="hyundai",
-    region=Region.US,
-    pin="1234",
+   username="someguy@example.com",
+   password="hunter1",
+   brand="hyundai",
+   region=Region.US,
+   pin="1234",
 )
 
 client = BlueLinky(config)
 vehicle = client.get_vehicle("5NMS55555555555555")
 if vehicle:
-    response = vehicle.lock()
-    print(response)
+   response = vehicle.lock()
+   print(response)
 ```
+
+You can also run a quick smoke test with `python -m bluelinky`, which reads credentials from environment variables such as `BLUELINKY_USERNAME`, `BLUELINKY_PASSWORD`, and `BLUELINKY_REGION` or from a JSON config file pointed to by `BLUELINKY_CONFIG`.
 
 ## Development
 
