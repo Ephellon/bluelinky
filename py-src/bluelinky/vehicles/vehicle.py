@@ -21,57 +21,34 @@ class Vehicle:
       self.vehicle_config = vehicle_config
       self.controller = controller
       self.user_config: BlueLinkyConfig = getattr(controller, "user_config")
-      self._locked = False
-      self._engine_on = False
-      self._status: Optional[VehicleStatus] = None
-      self._full_status: Optional[FullVehicleStatus] = None
-      self._location: Optional[VehicleLocation] = None
-      self._odometer: Optional[VehicleOdometer] = None
+      self._full_status: Optional[FullVehicleStatus | None] = None
+      self._status: Optional[VehicleStatus | RawVehicleStatus | None] = None
+      self._location: Optional[VehicleLocation | None] = None
+      self._odometer: Optional[VehicleOdometer | None] = None
 
-   def status(self, input: Optional[VehicleStatusOptions] = None) -> Optional[VehicleStatus | RawVehicleStatus]:
-      if self._status is None or input.refresh:
-         self._status = VehicleStatus(
-            engine_on=self._engine_on,
-            locked=self._locked,
-            last_update=datetime.utcnow(),
-            raw={},
-         )
-      return self._status
+   def status(self, input: VehicleStatusOptions) -> Optional[VehicleStatus | RawVehicleStatus]:
+      raise NotImplementedError
 
-   def full_status(self, input: Optional[VehicleStatusOptions] = None) -> Optional[FullVehicleStatus]:
-      if self._full_status is None or input.refresh:
-         self._full_status = FullVehicleStatus(payload={"vin": self.vin()})
-      return self._full_status
+   def full_status(self, input: VehicleStatusOptions) -> Optional[FullVehicleStatus]:
+      raise NotImplementedError
 
    def unlock(self) -> str:
-      self._locked = False
-      return "unlocked"
+      raise NotImplementedError
 
    def lock(self) -> str:
-      self._locked = True
-      return "locked"
+      raise NotImplementedError
 
-   def start(self, config: Optional[VehicleStartOptions] = None) -> str:
-      self._engine_on = True
-      self._status = VehicleStatus(
-         engine_on=True,
-         locked=self._locked,
-         last_update=datetime.utcnow(),
-         raw={"config": config.__dict__},
-      )
-      return "started"
+   def start(self, config: VehicleStartOptions) -> str:
+      raise NotImplementedError
 
    def stop(self) -> str:
-      self._engine_on = False
-      if self._status:
-         self._status.engine_on = False
-      return "stopped"
+      raise NotImplementedError
 
    def location(self) -> Optional[VehicleLocation]:
-      return self._location
+      raise NotImplementedError
 
    def odometer(self) -> Optional[VehicleOdometer]:
-      return self._odometer
+      raise NotImplementedError
 
    def vin(self) -> str:
       return self.vehicle_config.vin
