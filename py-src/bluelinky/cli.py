@@ -16,7 +16,7 @@ from typing import Optional
 
 from . import BlueLinky, Region
 from .interfaces import BlueLinkyConfig
-from .interfaces.common_interfaces import VehicleStatusOptions
+from .interfaces.common_interfaces import VehicleStartOptions, VehicleStatusOptions
 from .tools.common_tools import haversine_km
 
 
@@ -71,6 +71,73 @@ def load_config(path: Optional[str] = None) -> dict:
    p = resolve_config_path(path)
    with p.open("r", encoding="utf-8") as f:
       return json.load(f)
+
+
+def _convert_temperature(value: int, from_unit: str, to_unit: str) -> int:
+   if from_unit == to_unit:
+      return value
+
+   if from_unit == "C" and to_unit == "F":
+      return int(round((value * 9 / 5) + 32))
+
+   if from_unit == "F" and to_unit == "C":
+      return int(round((value - 32) * 5 / 9))
+
+   return value
+
+
+def _clamp_temperature(value: int, unit: str) -> int:
+   if unit == "F":
+      return max(61, min(83, value))
+   return max(16, min(28, value))
+
+
+def _parse_temperature_arg(value: str) -> tuple[int, str]:
+   raw = str(value).strip()
+   if not raw:
+      raise argparse.ArgumentTypeError("temperature value cannot be empty")
+
+   unit = None
+   if raw[-1].upper() in ("C", "F") and len(raw) > 1:
+      unit = raw[-1].upper()
+      raw = raw[:-1]
+
+   try:
+      temp = float(raw)
+   except ValueError as exc:
+      raise argparse.ArgumentTypeError(f"invalid temperature: {value!r}") from exc
+
+   if unit is None:
+      unit = "C" if temp <= 45 else "F"
+
+   clamped = int(round(temp))
+   if unit == "F":
+      clamped = max(61, min(83, clamped))
+   else:
+      clamped = max(16, min(28, clamped))
+
+   return clamped, unit
+
+
+def _parse_time_arg(value: str) -> int:
+   try:
+      minutes = int(value)
+   except ValueError as exc:
+      raise argparse.ArgumentTypeError(f"invalid time value: {value!r}") from exc
+
+   return max(1, min(30, minutes))
+
+
+def _parse_heat_arg(value: str) -> str:
+   normalized = str(value).strip().lower()
+   if normalized in ("yes", "on", "true", "1"):
+      return "on"
+   if normalized == "all":
+      return "all"
+   if normalized == "defrost":
+      return "defrost"
+
+   raise argparse.ArgumentTypeError("--heat must be one of: yes, on, true, 1, all, defrost")
 
 
 def make_client(cfg_data: dict) -> BlueLinky:
@@ -159,6 +226,80 @@ def cmd_flash(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    res = vehicle.light()
    print("Lights command sent:", res)
    return 0
+
+
+def _heat_mode_from_arg(value: Optional[str]) -> tuple[bool, bool, str]:
+   if value is None:
+      return False, False, "off"
+
+   if value == "on":
+      return True, False, "on"
+   if value == "all":
+      return True, True, "all"
+   if value == "defrost":
+      return False, True, "defrost"
+
+   return False, False, "off"
+
+
+def _target_unit_for_vehicle(vehicle) -> str:
+   vehicle_region = getattr(vehicle, "region", None)
+   return "F" if vehicle_region == Region.US else "C"
+
+
+def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   try:
+      heat_on, defrost_on, heat_mode = _heat_mode_from_arg(getattr(args, "heat", None))
+
+      target_unit = _target_unit_for_vehicle(vehicle)
+      default_temp = 72 if target_unit == "F" else 22
+
+      temp_value: Optional[int] = None
+      temp_unit: str = target_unit
+      if getattr(args, "temp", None) is not None:
+         parsed_temp, parsed_unit = args.temp
+         temp_value = _clamp_temperature(
+            _convert_temperature(parsed_temp, parsed_unit, target_unit),
+            target_unit,
+         )
+         temp_unit = target_unit
+      else:
+         if heat_on or defrost_on:
+            temp_value = default_temp
+            temp_unit = target_unit
+
+      hvac_on = bool((getattr(args, "temp", None) is not None) or heat_on or defrost_on)
+      duration = getattr(args, "time", None)
+      if duration is None:
+         duration = 10
+
+      start_options = VehicleStartOptions(
+         hvac=hvac_on,
+         duration=duration,
+         temperature=temp_value if temp_value is not None else default_temp,
+         defrost=defrost_on,
+         heatedFeatures=1 if heat_on else 0,
+         unit=temp_unit,
+         seatClimateSettings=None,
+      )
+
+      log.info(
+         "Starting vehicle for %s minutes at %s%s (heat=%s)",
+         duration,
+         start_options.temperature,
+         temp_unit,
+         heat_mode,
+      )
+
+      res = vehicle.start(start_options)
+      print(res)
+      return 0
+   except argparse.ArgumentTypeError as exc:
+      parser = build_parser()
+      parser.error(str(exc))
+   except Exception as exc:
+      print(str(exc))
+      return 1
 
 
 def _extract_lat_lon_alt(loc) -> Optional[tuple[float, float, float]]:
@@ -301,6 +442,10 @@ def build_parser() -> argparse.ArgumentParser:
    _home       = sub.add_parser("home", help="Show the saved (Home) vehicle location.")
    _home_sub   = _home.add_subparsers(dest="home_command", required=False)
    _home_set   = _home_sub.add_parser("set", help="Set the vehicle's current location as the saved (Home) location.")
+   _start      = sub.add_parser("start", help="Remote start with optional climate settings.")
+   _start.add_argument("--temp", type=_parse_temperature_arg, help="Target temperature (e.g. 25C or 77F)")
+   _start.add_argument("--time", type=_parse_time_arg, help="Ignition duration in minutes (1-30)")
+   _start.add_argument("--heat", type=_parse_heat_arg, help="Enable heated features (yes/on/true/all/defrost)")
 
    return parser
 
@@ -345,6 +490,8 @@ def main(argv: Optional[list[str]] = None) -> int:
       return cmd_flash(client, vehicle, args)
    if cmd == "locate":
       return cmd_locate(client, vehicle, args)
+   if cmd == "start":
+      return cmd_start(client, vehicle, args)
 
    parser.error(f"Unknown command: {cmd!r}")
    return 2
