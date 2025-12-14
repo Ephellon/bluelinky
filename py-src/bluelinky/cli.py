@@ -140,6 +140,18 @@ def _parse_heat_arg(value: str) -> str:
    raise argparse.ArgumentTypeError("--heat must be one of: yes, on, true, 1, all, defrost")
 
 
+def _parse_charge_limit(value: str) -> int:
+   try:
+      percent = int(value)
+   except ValueError as exc:
+      raise argparse.ArgumentTypeError(f"invalid charge limit: {value!r}") from exc
+
+   if percent < 50 or percent > 100:
+      raise argparse.ArgumentTypeError("--max must be between 50 and 100 (inclusive)")
+
+   return percent
+
+
 def make_client(cfg_data: dict) -> BlueLinky:
    unknown = set(cfg_data.keys()) - set(BlueLinkyConfig.__annotations__.keys())
    if unknown:
@@ -266,8 +278,111 @@ def cmd_odometer(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
       return 1
 
 
+def _ev_drive_history(client, vehicle):
+   if hasattr(vehicle, "driveHistory"):
+      return vehicle.driveHistory()
+   if hasattr(vehicle, "drive_history"):
+      return vehicle.drive_history()
+
+   if hasattr(client, "driveHistory"):
+      return client.driveHistory(vehicle)
+   if hasattr(client, "drive_history"):
+      return client.drive_history(vehicle)
+
+   controller = getattr(client, "controller", None)
+   if controller and hasattr(controller, "driveHistory"):
+      return controller.driveHistory(vehicle)
+   if controller and hasattr(controller, "drive_history"):
+      return controller.drive_history(vehicle)
+
+   return None
+
+
+def _ev_charge_targets(client, vehicle):
+   if hasattr(vehicle, "getChargeTargets"):
+      return vehicle.getChargeTargets()
+   if hasattr(vehicle, "get_charge_targets"):
+      return vehicle.get_charge_targets()
+
+   if hasattr(client, "getChargeTargets"):
+      return client.getChargeTargets(vehicle)
+   if hasattr(client, "get_charge_targets"):
+      return client.get_charge_targets(vehicle)
+
+   controller = getattr(client, "controller", None)
+   if controller and hasattr(controller, "getChargeTargets"):
+      return controller.getChargeTargets(vehicle)
+   if controller and hasattr(controller, "get_charge_targets"):
+      return controller.get_charge_targets(vehicle)
+
+   return None
+
+
+def _call_if_compatible(obj, name: str, args: tuple, kwargs: dict):
+   if obj is None or not hasattr(obj, name):
+      return False, None
+
+   fn = getattr(obj, name)
+   try:
+      return True, fn(*args, **kwargs)
+   except TypeError:
+      return False, None
+
+
+def _ev_set_charge_limits(client, vehicle, percent: int):
+   attempts = [
+      (vehicle, "setChargeLimits", (), {"max": percent}),
+      (vehicle, "setChargeLimit", (), {"max": percent}),
+      (vehicle, "set_charge_limits", (), {"max": percent}),
+      (vehicle, "set_charge_limit", (), {"max": percent}),
+      (client, "setChargeLimits", (vehicle, percent), {}),
+      (client, "setChargeLimits", (vehicle,), {"max": percent}),
+      (client, "setChargeLimit", (vehicle, percent), {}),
+      (client, "setChargeLimit", (vehicle,), {"max": percent}),
+      (client, "set_charge_limits", (vehicle, percent), {}),
+      (client, "set_charge_limits", (vehicle,), {"max": percent}),
+      (client, "set_charge_limit", (vehicle, percent), {}),
+      (client, "set_charge_limit", (vehicle,), {"max": percent}),
+   ]
+
+   controller = getattr(client, "controller", None)
+   attempts.extend([
+      (controller, "setChargeLimits", (vehicle, percent), {}),
+      (controller, "setChargeLimits", (vehicle,), {"max": percent}),
+      (controller, "setChargeLimit", (vehicle, percent), {}),
+      (controller, "setChargeLimit", (vehicle,), {"max": percent}),
+      (controller, "set_charge_limits", (vehicle, percent), {}),
+      (controller, "set_charge_limits", (vehicle,), {"max": percent}),
+      (controller, "set_charge_limit", (vehicle, percent), {}),
+      (controller, "set_charge_limit", (vehicle,), {"max": percent}),
+   ])
+
+   for obj, name, args, kwargs in attempts:
+      ok, res = _call_if_compatible(obj, name, args, kwargs)
+      if ok:
+         return res
+
+   return None
+
+
 def cmd_charge(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    try:
+      if getattr(args, "targets", False):
+         res = _ev_charge_targets(client, vehicle)
+         if res is None:
+            print("EV charge targets are not implemented in this port yet.")
+            return 1
+         print(json.dumps(res, indent=4, default=str))
+         return 0
+
+      if getattr(args, "max", None) is not None:
+         res = _ev_set_charge_limits(client, vehicle, args.max)
+         if res is None:
+            print("EV charge limits are not implemented in this port yet.")
+            return 1
+         print(json.dumps(res, indent=4, default=str))
+         return 0
+
       res = vehicle.startCharge()
       print(res)
       return 0
@@ -288,7 +403,13 @@ def cmd_report(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
 
 def cmd_history(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    try:
-      history = vehicle.tripInfo()
+      if getattr(args, "scope", None) == "all":
+         history = _ev_drive_history(client, vehicle)
+         if history is None:
+            print("EV drive history is not implemented in this port yet.")
+            return 1
+      else:
+         history = vehicle.tripInfo()
       print(json.dumps(history, indent=4, default=str))
       return 0
    except Exception as exc:
@@ -588,9 +709,13 @@ def build_parser() -> argparse.ArgumentParser:
    _start.add_argument("--time", type=_parse_time_arg, help="Ignition duration in minutes (1-30)")
    _start.add_argument("--heat", type=_parse_heat_arg, help="Enable heated features (yes/on/true/all/defrost)")
    _stop       = sub.add_parser("stop", help="Remote stop (turn off).")
-   _charge     = sub.add_parser("charge", help="Start charging the vehicle.")
+   _charge     = sub.add_parser("charge", help="Start charging the vehicle or manage EV charge settings.")
+   charge_mode = _charge.add_mutually_exclusive_group()
+   charge_mode.add_argument("--targets", action="store_true", help="Get EV charge targets (if supported).")
+   charge_mode.add_argument("--max", type=_parse_charge_limit, help="Set EV charge limit (50-100%).")
    _report     = sub.add_parser("report", help="Get the monthly report.")
    _history    = sub.add_parser("history", help="Get trip/usage history.")
+   _history.add_argument("scope", nargs="?", choices=["all"], help="Use 'all' for EV drive history (if supported).")
 
    return parser
 
