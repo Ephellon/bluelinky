@@ -1,25 +1,14 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from enum import Enum
 from typing import Callable, Dict, List, Literal
 
-from bluelinky.constants.australia import (
-   AustraliaBrandEnvironment,
-   getBrandEnvironment as getAUBrandEnvironment,
-)
-from bluelinky.constants.canada import (
-   CanadianBrandEnvironment,
-   getBrandEnvironment as getCABrandEnvironment,
-)
-from bluelinky.constants.china import (
-   ChineseBrandEnvironment,
-   getBrandEnvironment as getCNBrandEnvironment,
-)
-from bluelinky.constants.europe import (
-   EuropeanBrandEnvironment,
-   getBrandEnvironment as getEUBrandEnvironment,
-)
 from bluelinky.interfaces.common_interfaces import Brand, VehicleStatusOptions
+
+from .australia import AustraliaBrandEnvironment, getBrandEnvironment as getAUBrandEnvironment
+from .canada import CanadianBrandEnvironment, getBrandEnvironment as getCABrandEnvironment
+from .china import ChineseBrandEnvironment, getBrandEnvironment as getCNBrandEnvironment
+from .europe import EuropeanBrandEnvironment, getBrandEnvironment as getEUBrandEnvironment
 
 
 def _all_endpoints_ca(brand: Brand) -> Dict:
@@ -56,6 +45,10 @@ class REGIONS(str, Enum):
    AU = "AU"
 
 
+# Backwards compatibility alias used by CLI and __main__ entrypoint
+Region = REGIONS
+
+
 ChargeTarget = Literal[50, 60, 70, 80, 90, 100]
 POSSIBLE_CHARGE_LIMIT_VALUES: List[int] = [50, 60, 70, 80, 90, 100]
 
@@ -63,3 +56,17 @@ DEFAULT_VEHICLE_STATUS_OPTIONS: VehicleStatusOptions = VehicleStatusOptions(
    refresh=False,
    parsed=False,
 )
+
+__all__ = [
+   "ALL_ENDPOINTS",
+   "REGION",
+   "REGIONS",
+   "Region",
+   "ChargeTarget",
+   "POSSIBLE_CHARGE_LIMIT_VALUES",
+   "DEFAULT_VEHICLE_STATUS_OPTIONS",
+   "AustraliaBrandEnvironment",
+   "CanadianBrandEnvironment",
+   "ChineseBrandEnvironment",
+   "EuropeanBrandEnvironment",
+]

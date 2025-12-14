@@ -2,7 +2,7 @@
 
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Generic
 
-from .constants import REGIONS
+from .constants import REGIONS, Region
 from .controllers.american_controller import AmericanBlueLinkyConfig, AmericanController
 from .controllers.australia_controller import AustraliaBlueLinkyConfig, AustraliaController
 from .controllers.canadian_controller import CanadianBlueLinkyConfig, CanadianController

@@ -3,8 +3,12 @@
 from dataclasses import dataclass
 from typing import Dict, Literal, TypedDict, cast
 
-from ..controllers.chinese_controller import ChineseBlueLinkConfig
+from typing import TYPE_CHECKING
+
 from ..interfaces.common_interfaces import Brand
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.chinese_controller import ChineseBlueLinkConfig
 
 
 class ChineseBrandEnvironmentEndpoints(TypedDict):

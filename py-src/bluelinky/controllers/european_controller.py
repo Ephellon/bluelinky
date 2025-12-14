@@ -1,6 +1,3 @@
-﻿```python
-# py-src/bluelinky/controllers/european_controller.py
-
 from __future__ import annotations
 
 import json
@@ -360,4 +357,3 @@ class EuropeanController(SessionController[EuropeBlueLinkyConfig]):
          "ccsp-application-id": self.environment.appId,
          "Content-Type": "application/json",
       }
-```

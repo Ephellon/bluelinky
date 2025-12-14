@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 import requests
 
 from ...constants.europe import EULanguages, EuropeanBrandEnvironment
-from .authStrategy import AuthStrategy, Code, initSession
+from .auth_strategy import AuthStrategy, Code, initSession
 
 stdHeaders: Dict[str, str] = {
    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_1 like Mac OS X) AppleWebKit/604.3.5 (KHTML, like Gecko) Version/11.0 Mobile/15B92 Safari/604.1',

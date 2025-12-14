@@ -15,8 +15,8 @@ from ..logger import logger
 from ..tools.common_tools import asyncMap, manageBluelinkyError, uuidV4
 from ..vehicles.australia_vehicle import AustraliaVehicle
 from ..vehicles.vehicle import Vehicle
-from .authStrategies.australia_authStrategy import AustraliaAuthStrategy
-from .authStrategies.authStrategy import Code
+from .authStrategies.australia_auth_strategy import AustraliaAuthStrategy
+from .authStrategies.auth_strategy import Code
 from .controller import SessionController
 
 

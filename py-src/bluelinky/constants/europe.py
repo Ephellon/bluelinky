@@ -3,10 +3,14 @@
 from dataclasses import dataclass
 from typing import Callable, Dict, Literal, Optional, Protocol, TypedDict
 
-from ..constants import REGIONS
-from ..controllers.european_controller import EuropeBlueLinkyConfig
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.european_controller import EuropeBlueLinkyConfig
 from ..interfaces.common_interfaces import Brand
 from .stamps import StampMode, getStampGenerator
+
+REGION_CODE = "EU"
 
 EULanguages = Literal[
    "cs",
@@ -131,7 +135,7 @@ def getHyundaiEnvironment(
             "appId": appId,
             "brand": "hyundai",
             "mode": stampMode,
-            "region": REGIONS.EU,
+            "region": REGION_CODE,
             "stampHost": "https://raw.githubusercontent.com/neoPix/bluelinky-stamps/master/",
             "stampsFile": stampsFile,
          }
@@ -180,7 +184,7 @@ def getKiaEnvironment(
             "appId": appId,
             "brand": "kia",
             "mode": stampMode,
-            "region": REGIONS.EU,
+            "region": REGION_CODE,
             "stampHost": "https://raw.githubusercontent.com/neoPix/bluelinky-stamps/master/",
             "stampsFile": stampsFile,
          }

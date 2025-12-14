@@ -1,9 +1,8 @@
-﻿```python
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, Union, cast
 
 from ..constants import (
    DEFAULT_VEHICLE_STATUS_OPTIONS,
@@ -11,7 +10,6 @@ from ..constants import (
    REGIONS,
    ChargeTarget,
 )
-from ..controllers.chinese_controller import ChineseController
 from ..interfaces.common_interfaces import (
    DeepPartial,
    EVChargeModeTypes,
@@ -39,6 +37,9 @@ from ..logger import logger
 from ..tools.common_tools import ManagedBluelinkyError, manageBluelinkyError
 from ..util import addMinutes, celciusToTempCode, parseDate, tempCodeToCelsius
 from .vehicle import Vehicle
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.chinese_controller import ChineseController
 
 TResp = TypeVar("TResp", bound=Dict[str, Any])
 
@@ -727,4 +728,3 @@ def _toDayDate(date: Dict[str, int]) -> str:
    if date.get("day"):
       return f"{_toMonthDate(date)}{str(date['day']).zfill(2)}"
    return _toMonthDate(date)
-```
