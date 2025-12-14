@@ -269,9 +269,6 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
             temp_unit = target_unit
 
       hvac_on = bool((getattr(args, "temp", None) is not None) or heat_on or defrost_on)
-      if hvac_on and temp_value is None:
-         temp_value = default_temp
-
       duration = getattr(args, "time", None)
       if duration is None:
          duration = 10
