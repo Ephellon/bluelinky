@@ -218,7 +218,7 @@ def cmd_status(client, vehicle, args):
    except TypeError:
       data = status
 
-   print(json.dumps(data, indent=2, default=str))
+   print(json.dumps(data, indent=4, default=str))
    return 0
 
 
@@ -259,7 +259,7 @@ def cmd_odometer(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
       except TypeError:
          data = odometer
 
-      print(json.dumps(data, indent=2, default=str))
+      print(json.dumps(data, indent=4, default=str))
       return 0
    except Exception as exc:
       print(str(exc))
@@ -279,7 +279,7 @@ def cmd_charge(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
 def cmd_report(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    try:
       report = vehicle.monthlyReport()
-      print(json.dumps(report, indent=2, default=str))
+      print(json.dumps(report, indent=4, default=str))
       return 0
    except Exception as exc:
       print(str(exc))
@@ -289,7 +289,7 @@ def cmd_report(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
 def cmd_history(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    try:
       history = vehicle.tripInfo()
-      print(json.dumps(history, indent=2, default=str))
+      print(json.dumps(history, indent=4, default=str))
       return 0
    except Exception as exc:
       print(str(exc))
@@ -445,8 +445,37 @@ def cmd_home_set(client: BlueLinky, vehicle, cfg_data: dict, args: argparse.Name
 
 
 def cmd_locate(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   loc = vehicle.location()
+
+   try:
+      data = asdict(loc)
+   except TypeError:
+      data = loc
+
+   print(json.dumps(data, indent=4, default=str))
+   return 0
+
+
+def format_heading(deg: float) -> str:
+   directions = [
+      "N", "NE",
+      "E", "SE",
+      "S", "SW",
+      "W", "NW",
+   ]
+
+   deg = deg % 360
+   idx = int((deg + 22.5) / 45) % 8
+   return f"{int(round(deg))}°{directions[idx]}"
+
+
+def cmd_locate_offset(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    res = vehicle.location()
-   print(f"Current location: LAT {res.latitude}, LON {res.longitude}, ALT {res.altitude}, {res.heading}°")
+   lat = res.latitude
+   lon = res.longitude
+   alt = res.altitude
+   head = res.heading
+   print(f"Current location:\n\tLAT {lat}, LON {lon}, ALT {alt}, {format_heading(head)}")
 
    if client.config.home:
       home = client.config.home
@@ -454,11 +483,11 @@ def cmd_locate(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
          res.latitude, res.longitude,
          home.latitude, home.longitude,
       )
-      print(f"Home location: LAT {home.latitude}, LON {home.longitude}, ALT {home.altitude}")
+      print(f"Home location:\n\tLAT {home.latitude}, LON {home.longitude}, ALT {home.altitude}")
       if dist_km < 1:
-         print(f"Distance from home: {(100*dist_km):.0f} m")
+         print(f"Distance from home:\n\t{(100*dist_km):.0f} m")
       else:
-         print(f"Distance from home: {dist_km:.2f} km")
+         print(f"Distance from home:\n\t{dist_km:.2f} km")
    return 0
 
 
@@ -494,7 +523,7 @@ def cmd_list(client: BlueLinky, args: argparse.Namespace) -> int:
                vin = None
          data.append({"name": name, "vin": vin})
    # Print as JSON for consistency with other commands
-   print(json.dumps(data, indent=2, default=str))
+   print(json.dumps(data, indent=4, default=str))
    return 0
 
 
@@ -548,6 +577,8 @@ def build_parser() -> argparse.ArgumentParser:
    _horn       = sub.add_parser("horn", help="Honk the horn.")
    _flash      = sub.add_parser("flash", help="Flash the lights.")
    _locate     = sub.add_parser("locate", help="Show last known vehicle location.")
+   _locate_sub = _locate.add_subparsers(dest="locate_command", required=False)
+   _locate_set = _locate_sub.add_parser("offset", help="Show location offset from configured home position.")
    _odometer   = sub.add_parser("odometer", help="Show the vehicle odometer.")
    _home       = sub.add_parser("home", help="Show the saved (Home) vehicle location.")
    _home_sub   = _home.add_subparsers(dest="home_command", required=False)
@@ -610,6 +641,8 @@ def main(argv: Optional[list[str]] = None) -> int:
    if cmd == "flash":
       return cmd_flash(client, vehicle, args)
    if cmd == "locate":
+      if getattr(args, "locate_command", None) == "offset":
+         return cmd_locate_offset(client, vehicle, args)
       return cmd_locate(client, vehicle, args)
    if cmd == "odometer":
       return cmd_odometer(client, vehicle, args)

@@ -75,7 +75,7 @@ By default the case is 24H, but it can but customized at will. A nice trick is t
 
 The JSON file must respect [this format](https://github.com/neoPix/bluelinky-stamps/blob/master/kia.json).
 
-## Supported Features
+## Supported Features & CLI Examples
 - lock
     - `python -m bluelinky lock`
 - unlock
@@ -86,6 +86,10 @@ The JSON file must respect [this format](https://github.com/neoPix/bluelinky-sta
     - `python -m bluelinky start --temp 70F`
     - `python -m bluelinky start --time 10`
     - `python -m bluelinky start --heat yes`
+        - `heat` can be `true`, `yes` or `on` to represent "Start vehicle with heated features on, without the front defroster"
+        - `heat` can be `defrost` to represent "Start vehicle with the front defroster ONLY"
+        - `heat` can be `all` to represent "Start vehicle with all heated features (all of the above)"
+    - `python -m bluelinky start`
 - stop
     - `python -m bluelinky stop`
 - status (full, parsed, cached)
@@ -96,17 +100,18 @@ The JSON file must respect [this format](https://github.com/neoPix/bluelinky-sta
     - `python -m bluelinky odometer`
 - location
     - `python -m bluelinky locate`
+    - `python -m bluelinky locate offset`
 - startCharge
     - `python -m bluelinky charge`
 - monthlyReport
     - `python -m bluelinky report`
 - tripInfo
     - `python -m bluelinky history`
-- (**TODO**) EV: driveHistory
+- **Electric Vehicles** &mdash; driveHistory
     - `python -m bluelinky history all`
-- (**TODO**) EV: getChargeTargets
+- **Electric Vehicles** &mdash; getChargeTargets
     - `python -m bluelinky charge --targets`
-- (**TODO**) EV: setChargeLimits
+- **Electric Vehicles** &mdash; setChargeLimits
     - `python -m bluelinky charge --max 80`
 
 ## Supported Regions
