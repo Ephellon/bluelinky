@@ -252,7 +252,10 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
       heat_on, defrost_on, heat_mode = _heat_mode_from_arg(getattr(args, "heat", None))
 
       target_unit = _target_unit_for_vehicle(client)
+      highest_temp = 83 if target_unit == "F" else 28
       default_temp = 72 if target_unit == "F" else 22
+      lowest_temp  = 61 if target_unit == "F" else 16
+      hvac_on = bool((getattr(args, "temp", None) is not None) or heat_on or defrost_on)
 
       temp_value: Optional[int] = None
       temp_unit: str = target_unit
@@ -264,11 +267,14 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
          )
          temp_unit = target_unit
       else:
-         if heat_on or defrost_on:
+         # If user didn't specify temp:
+         #     heat_on: use the highest temperature
+         #     defrost_on: use default temperature to avoid "heating" intent while keeping API happy
+         if heat_on:
+            temp_value = highest_temp
+         elif defrost_on:
             temp_value = default_temp
-            temp_unit = target_unit
 
-      hvac_on = bool((getattr(args, "temp", None) is not None) or heat_on or defrost_on)
       duration = getattr(args, "time", None)
       if duration is None:
          duration = 10
@@ -413,6 +419,29 @@ def cmd_list(client: BlueLinky, args: argparse.Namespace) -> int:
    return 0
 
 
+def _present(value):
+   return value if value is not None else "<NOT SET>"
+
+
+def _present_secret(value):
+   return "<PROVIDED>" if value else "<MISSING>"
+
+
+def print_config_summary(cfg_path: Path, cfg_data: dict, args):
+   print("\n--- BlueLinky Configuration ---")
+   print(f"Config file: {cfg_path}")
+   print(f"Region: {_present(cfg_data.get('region'))}")
+   print(f"Brand: {_present(cfg_data.get('brand'))}")
+   print(f"Username: {_present(cfg_data.get('username'))}")
+   print(f"Password: {_present_secret(cfg_data.get('password'))}")
+   print(f"PIN: {_present_secret(cfg_data.get('pin'))}")
+   print(f"VIN: {_present(cfg_data.get('vin'))}")
+   print(f"Vehicle ID: {_present(cfg_data.get('vehicleId'))}")
+   print(f"Home: {_present(cfg_data.get('home'))}")
+   print(f"Debug: {'on' if args.debug else 'off'}")
+   print("-------------------------------\n")
+
+
 def build_parser() -> argparse.ArgumentParser:
    parser = argparse.ArgumentParser(
       prog="bluelinky",
@@ -430,7 +459,7 @@ def build_parser() -> argparse.ArgumentParser:
       help="Enable debug logging",
    )
 
-   sub = parser.add_subparsers(dest="command", required=True)
+   sub = parser.add_subparsers(dest="command", required=False)
 
    _list       = sub.add_parser("list", help="List all vehicles.")
    _status     = sub.add_parser("status", help="Show vehicle status.")
@@ -453,6 +482,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[list[str]] = None) -> int:
    parser = build_parser()
    args = parser.parse_args(argv)
+
+   cfg_path = resolve_config_path(args.config)
+   cfg_data = load_config(args.config)
+
+   if args.command is None:
+      print_config_summary(cfg_path, cfg_data, args)
+      parser.error("the following arguments are required: command")
 
    logging.basicConfig(
       level=logging.DEBUG if args.debug else logging.INFO,
