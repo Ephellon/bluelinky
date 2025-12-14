@@ -47,7 +47,7 @@ Ensure you have a `config.json` that matches the structure of the following, wit
 
 Run an install for all the dependencies, `pip install .` *or* `PYTHON-INSTALL.BAT`
 
-Now you can invoke the CLI with `py -m bluelinky [--help] [--config CONFIG] [--debug] {list,status,lock,unlock,horn,flash,locate,home} ...`
+Now you can invoke the CLI with `python -m bluelinky [-h] [--config CONFIG] [--debug] {list,status,lock,unlock,horn,flash,locate,home,start,stop} ...`
 
 ## Development
 This project was translated from TypeScript into Python using Codex (AI). **Do not** use this project for any critical infrastructure.
@@ -77,18 +77,37 @@ The JSON file must respect [this format](https://github.com/neoPix/bluelinky-sta
 
 ## Supported Features
 - lock
+    - `python -m bluelinky lock`
 - unlock
+    - `python -m bluelinky unlock`
 - start (with climate control)
+    - `python -m bluelinky start --temp 80F --time 3 --heat defrost`
+    - `python -m bluelinky start --temp 28C --time 5 --heat all`
+    - `python -m bluelinky start --temp 70F`
+    - `python -m bluelinky start --time 10`
+    - `python -m bluelinky start --heat yes`
 - stop
+    - `python -m bluelinky stop`
 - status (full, parsed, cached)
+    - `python -m bluelinky status`
+    - `python -m bluelinky status --from parsed`
+    - `python -m bluelinky status --from cached`
 - odometer
+    - `python -m bluelinky odometer`
 - location
+    - `python -m bluelinky locate`
 - startCharge
+    - `python -m bluelinky charge`
 - monthlyReport
+    - `python -m bluelinky report`
 - tripInfo
+    - `python -m bluelinky history`
 - EV: driveHistory
+    - `python -m bluelinky history all`
 - EV: getChargeTargets
+    - `python -m bluelinky charge --targets`
 - EV: setChargeLimits
+    - `python -m bluelinky charge --max 80`
 
 ## Supported Regions
 | [Regions](https://github.com/Hacksore/bluelinky/wiki/Regions)

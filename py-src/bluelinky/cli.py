@@ -308,6 +308,17 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
       return 1
 
 
+def cmd_stop(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   try:
+      log.info("Stopping vehicle...")
+      res = vehicle.stop()
+      print("Stop command sent:", res)
+      return 0
+   except Exception as exc:
+      print(str(exc))
+      return 1
+
+
 def _extract_lat_lon_alt(loc) -> Optional[tuple[float, float, float]]:
    if loc is None:
       return None
@@ -471,10 +482,11 @@ def build_parser() -> argparse.ArgumentParser:
    _home       = sub.add_parser("home", help="Show the saved (Home) vehicle location.")
    _home_sub   = _home.add_subparsers(dest="home_command", required=False)
    _home_set   = _home_sub.add_parser("set", help="Set the vehicle's current location as the saved (Home) location.")
-   _start      = sub.add_parser("start", help="Remote start with optional climate settings.")
+   _start      = sub.add_parser("start", help="Remote start (turn on) with optional climate settings.")
    _start.add_argument("--temp", type=_parse_temperature_arg, help="Target temperature (e.g. 25C or 77F)")
    _start.add_argument("--time", type=_parse_time_arg, help="Ignition duration in minutes (1-30)")
    _start.add_argument("--heat", type=_parse_heat_arg, help="Enable heated features (yes/on/true/all/defrost)")
+   _stop       = sub.add_parser("stop", help="Remote stop (turn off).")
 
    return parser
 
@@ -528,6 +540,8 @@ def main(argv: Optional[list[str]] = None) -> int:
       return cmd_locate(client, vehicle, args)
    if cmd == "start":
       return cmd_start(client, vehicle, args)
+   if cmd == "stop":
+      return cmd_stop(client, vehicle, args)
 
    parser.error(f"Unknown command: {cmd!r}")
    return 2
