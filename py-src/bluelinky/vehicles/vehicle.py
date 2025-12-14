@@ -22,11 +22,11 @@ if TYPE_CHECKING:  # pragma: no cover - type checking only
 
 class Vehicle(ABC):
    @abstractmethod
-   def status(self, input: VehicleStatusOptions) -> Optional[Union[VehicleStatus, RawVehicleStatus]]:
+   def status(self, input: VehicleStatusOptions | None = None) -> Optional[Union[VehicleStatus, RawVehicleStatus]]:
       raise NotImplementedError
 
    @abstractmethod
-   def fullStatus(self, input: VehicleStatusOptions) -> Optional[FullVehicleStatus]:
+   def fullStatus(self, input: VehicleStatusOptions | None = None) -> Optional[FullVehicleStatus]:
       raise NotImplementedError
 
    @abstractmethod
@@ -71,6 +71,7 @@ class Vehicle(ABC):
          pin=None,
          vin=None,
          vehicleId=None,
+         home=None,
       )
 
       self.userConfig = controller.userConfig

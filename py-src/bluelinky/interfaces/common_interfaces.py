@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, TypedDict, TypeVar, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, TypedDict, TypeVar, Union
 
 REGION = Literal["US", "CA", "EU", "CN", "AU"]
 
@@ -22,6 +22,7 @@ class BlueLinkyConfig:
    pin: Optional[str] = None
    vin: Optional[str] = None
    vehicleId: Optional[str] = None
+   home: Optional[Tuple[float, float, float]] = None
 
 
 @dataclass

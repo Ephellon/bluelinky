@@ -179,7 +179,10 @@ class ChineseVehicle(Vehicle):
       except Exception as err:
          raise manageBluelinkyError(err, "ChinaVehicle.fullStatus")
 
-   def status(self, input: VehicleStatusOptions) -> Optional[Union[VehicleStatus, RawVehicleStatus]]:
+   def status(self, input: VehicleStatusOptions | None = None) -> Optional[Union[VehicleStatus, RawVehicleStatus]]:
+      if input is None:
+         input = VehicleStatusOptions(refresh=True, parsed=True)
+
       statusConfig: Dict[str, Any] = {**DEFAULT_VEHICLE_STATUS_OPTIONS, **(input or {})}
 
       http = self.controller.getVehicleHttpService()

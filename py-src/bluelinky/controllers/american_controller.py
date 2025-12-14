@@ -71,33 +71,58 @@ class AmericanController(SessionController[AmericanBlueLinkyConfig]):
    # TODO: come up with a better return value?
    def login(self) -> str:
       logger.debug("Logging in to the API")
-      try:
-         response = requests.post(
-            f"{self.environment.baseUrl}/v2/ac/oauth/token",
-            json={
-               "username": self.userConfig.username,
-               "password": self.userConfig.password,
-            },
-            headers={
-               "User-Agent": "PostmanRuntime/7.26.10",
-               "client_id": self.environment.clientId,
-               "client_secret": self.environment.clientSecret,
-            },
-         )
 
-         body = response.json()
-         logger.debug(body)
+      last_body = None
+      last_status = None
 
-         if response.status_code != 200:
-            return "login bad"
+      for attempt in range(1, 4):
+         try:
+            response = requests.post(
+               f"{self.environment.baseUrl}/v2/ac/oauth/token",
+               json={
+                  "username": self.userConfig.username,
+                  "password": self.userConfig.password,
+               },
+               headers={
+                  "User-Agent": "PostmanRuntime/7.26.10",
+                  "client_secret": self.environment.clientSecret,
+                  "client_id": self.environment.clientId,
+               },
+               timeout=30,
+            )
 
-         self.session.accessToken = body.get("access_token")
-         self.session.refreshToken = body.get("refresh_token")
-         self.session.tokenExpiresAt = int(time.time() + int(body.get("expires_in")))
+            last_status = response.status_code
+            try:
+               body = response.json()
+            except Exception:
+               body = {"raw": response.text}
+            last_body = body
 
-         return "login good"
-      except Exception as err:
-         raise manageBluelinkyError(err, "AmericanController.login")
+            logger.debug(body)
+
+            if response.status_code in (502, 503, 504):
+               logger.debug(f"Token endpoint error {response.status_code}; retry {attempt}/3")
+               time.sleep(1.5 * attempt)
+               continue
+
+            if response.status_code != 200:
+               raise RuntimeError(f"Login failed ({response.status_code}): {body}")
+
+            self.session.accessToken = body.get("access_token")
+            self.session.refreshToken = body.get("refresh_token")
+            self.session.tokenExpiresAt = int(time.time() + int(body.get("expires_in", 0)))
+
+            if not self.session.accessToken:
+               raise RuntimeError(f"Login response missing access_token: {body}")
+
+            return "login good"
+
+         except Exception as err:
+            if attempt >= 3:
+               raise manageBluelinkyError(err, "AmericanController.login")
+            time.sleep(1.0 * attempt)
+
+      raise RuntimeError(f"Login failed ({last_status}): {last_body}")
 
    def logout(self) -> str:
       return "OK"
@@ -132,6 +157,12 @@ class AmericanController(SessionController[AmericanBlueLinkyConfig]):
                regDate=vehicleInfo.get("enrollmentDate"),
                brandIndicator=vehicleInfo.get("brandIndicator"),
                regId=vehicleInfo.get("regid"),
+               id=str(
+                  vehicleInfo.get("vehicleId")
+                  or vehicleInfo.get("regid")
+                  or vehicleInfo.get("vin")
+                  or ""
+               ),
                generation=vehicleInfo.get("vehicleGeneration"),
             )
 

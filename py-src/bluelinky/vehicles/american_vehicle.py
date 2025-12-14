@@ -242,7 +242,10 @@ class AmericanVehicle(Vehicle):
 
       raise Exception("Failed to stop vehicle!")
 
-   def status(self, input: VehicleStatusOptions) -> Union[VehicleStatus, RawVehicleStatus, None]:
+   def status(self, input: VehicleStatusOptions | None = None) -> Union[VehicleStatus, RawVehicleStatus, None]:
+      if input is None:
+         input = VehicleStatusOptions(refresh=True, parsed=True)
+
       base = asdict(DEFAULT_VEHICLE_STATUS_OPTIONS) if hasattr(DEFAULT_VEHICLE_STATUS_OPTIONS, "__dataclass_fields__") else dict(DEFAULT_VEHICLE_STATUS_OPTIONS)
       incoming = asdict(input) if hasattr(input, "__dataclass_fields__") else (input or {})
       statusConfig: Dict[str, Any] = {**base, **incoming}

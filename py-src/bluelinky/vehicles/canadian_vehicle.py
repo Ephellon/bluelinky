@@ -55,8 +55,11 @@ class CanadianVehicle(Vehicle):
 
    def status(
       self,
-      input: VehicleStatusOptions,
+      input: VehicleStatusOptions | None = None
    ) -> Optional[Union[VehicleStatus, RawVehicleStatus]]:
+      if input is None:
+         input = VehicleStatusOptions(refresh=True, parsed=True)
+
       statusConfig = {
          **DEFAULT_VEHICLE_STATUS_OPTIONS,
          **(input or {}),

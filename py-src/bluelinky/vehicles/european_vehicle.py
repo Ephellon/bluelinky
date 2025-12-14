@@ -182,7 +182,10 @@ class EuropeanVehicle(Vehicle):
       except Exception as err:
          raise manageBluelinkyError(err, "EuropeVehicle.fullStatus")
 
-   def status(self, input: VehicleStatusOptions) -> Optional[Union[VehicleStatus, RawVehicleStatus]]:
+   def status(self, input: VehicleStatusOptions | None = None) -> Optional[Union[VehicleStatus, RawVehicleStatus]]:
+      if input is None:
+         input = VehicleStatusOptions(refresh=True, parsed=True)
+
       statusConfig: Dict[str, Any] = {}
       statusConfig.update(DEFAULT_VEHICLE_STATUS_OPTIONS)
       statusConfig.update(input.__dict__ if hasattr(input, "__dict__") else cast(Dict[str, Any], input))

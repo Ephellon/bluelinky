@@ -1,4 +1,8 @@
-# py-src/bluelinky/cli.py
+# This is an updated version of the BlueLinky CLI that includes a
+# `list` command to enumerate all vehicles.  This allows you to verify
+# that your credentials are working and to see the vehicles on your
+# account without selecting a specific one.  The rest of the CLI
+# commands (status, lock, unlock, horn, flash, locate) remain unchanged.
 
 from __future__ import annotations
 
@@ -12,6 +16,8 @@ from typing import Optional
 
 from . import BlueLinky, Region
 from .interfaces import BlueLinkyConfig
+from .interfaces.common_interfaces import VehicleStatusOptions
+from .tools.common_tools import haversine_km
 
 
 DEFAULT_CONFIG_PATHS = [
@@ -61,6 +67,14 @@ def make_client(cfg_data: dict) -> BlueLinky:
    except KeyError:
       raise ValueError(f"Unknown region: {region_value!r}")
 
+   home = cfg_data.get("home")
+   home_tuple = None
+   if isinstance(home, (list, tuple)) and len(home) >= 2:
+      lat = float(home[0])
+      lon = float(home[1])
+      alt = float(home[2]) if len(home) > 2 and home[2] is not None else 0.0
+      home_tuple = (lat, lon, alt)
+
    cfg = BlueLinkyConfig(
       username=cfg_data["username"],
       password=cfg_data["password"],
@@ -68,6 +82,7 @@ def make_client(cfg_data: dict) -> BlueLinky:
       brand=cfg_data.get("brand", "hyundai"),
       region=region,
       vin=cfg_data.get("vin"),
+      home=home_tuple,
    )
 
    return BlueLinky(cfg)
@@ -129,9 +144,63 @@ def cmd_flash(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    return 0
 
 
+def cmd_home(client: BlueLinky, args: argparse.Namespace) -> int:
+   if client.config.home:
+      home = client.config.home
+      print(f"Home location: LAT {home.latitude}, LON {home.longitude}, ALT {home.altitude}")
+   else:
+      print(f"No home location set")
+   return 0
+
+
 def cmd_locate(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    res = vehicle.location()
-   print(json.dumps(res, indent=2, default=str))
+   print(f"Current location: LAT {res.latitude}, LON {res.longitude}, ALT {res.altitude}, {res.heading}°")
+
+   if client.config.home:
+      home = client.config.home
+      dist_km = haversine_km(
+         res.latitude, res.longitude,
+         home.latitude, home.longitude,
+      )
+      print(f"Home location: LAT {home.latitude}, LON {home.longitude}, ALT {home.altitude}")
+      print(f"Distance from home: {dist_km:.2f} km")
+   return 0
+
+
+def cmd_list(client: BlueLinky, args: argparse.Namespace) -> int:
+   vehicles = client.getVehicles()
+   if not vehicles:
+      print("No vehicles found.")
+      return 1
+   # Convert each vehicle's registration options to a dict for JSON serialization
+   try:
+      data = [asdict(v.vehicleConfig) for v in vehicles]
+   except TypeError:
+      # If asdict fails (unlikely), fall back to a simplified representation
+      data = []
+      for v in vehicles:
+         name: Optional[str] = None
+         # Some vehicles may not implement nickname/name helpers
+         if hasattr(v, "nickname"):
+            try:
+               name = v.nickname()
+            except Exception:
+               name = None
+         if not name and hasattr(v, "name"):
+            try:
+               name = v.name()
+            except Exception:
+               name = None
+         vin: Optional[str] = None
+         if hasattr(v, "vin"):
+            try:
+               vin = v.vin()
+            except Exception:
+               vin = None
+         data.append({"name": name, "vin": vin})
+   # Print as JSON for consistency with other commands
+   print(json.dumps(data, indent=2, default=str))
    return 0
 
 
@@ -153,12 +222,14 @@ def build_parser() -> argparse.ArgumentParser:
 
    sub = p.add_subparsers(dest="command", required=True)
 
+   sub.add_parser("list", help="List all vehicles.")
    sub.add_parser("status", help="Show vehicle status.")
    sub.add_parser("lock", help="Lock the vehicle.")
    sub.add_parser("unlock", help="Unlock the vehicle.")
    sub.add_parser("horn", help="Honk the horn.")
    sub.add_parser("flash", help="Flash the lights.")
    sub.add_parser("locate", help="Show last known vehicle location.")
+   sub.add_parser("home", help="Show the saved (Home) vehicle location.")
 
    return p
 
@@ -174,11 +245,19 @@ def main(argv: Optional[list[str]] = None) -> int:
 
    cfg_data = load_config(args.config)
    client = make_client(cfg_data)
-   vehicle = pick_vehicle(client, cfg_data)
 
    cmd = args.command
 
    print(f"Attempting to run '{cmd}' command...")
+
+   # Thes commands do not require selecting a specific vehicle
+   if cmd == "list":
+      return cmd_list(client, args)
+   if cmd == "home":
+      return cmd_home(client, args)
+
+   # For other commands we need a specific vehicle
+   vehicle = pick_vehicle(client, cfg_data)
 
    if cmd == "status":
       return cmd_status(client, vehicle, args)
@@ -195,3 +274,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
    parser.error(f"Unknown command: {cmd!r}")
    return 2
+
+
+if __name__ == "__main__":
+   raise SystemExit(main())

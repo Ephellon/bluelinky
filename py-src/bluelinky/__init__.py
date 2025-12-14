@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Generic
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Generic
+from dataclasses import dataclass
 
 from .constants import REGIONS, Region
 from .controllers.american_controller import AmericanBlueLinkyConfig, AmericanController
@@ -9,7 +10,7 @@ from .controllers.canadian_controller import CanadianBlueLinkyConfig, CanadianCo
 from .controllers.chinese_controller import ChineseBlueLinkConfig, ChineseController
 from .controllers.controller import SessionController
 from .controllers.european_controller import EuropeBlueLinkyConfig, EuropeanController
-from .interfaces.common_interfaces import Session
+from .interfaces.common_interfaces import (Session, BlueLinkyConfig)
 from .logger import logger
 from .vehicles.vehicle import Vehicle
 
@@ -26,8 +27,15 @@ DEFAULT_CONFIG: Dict[str, Any] = {
    "pin": "1234",
    "vin": "",
    "vehicleId": None,
+   "home": None,
 }
 
+
+@dataclass
+class HomeLocation:
+   latitude: float
+   longitude: float
+   altitude: float | None = None
 
 class EventEmitter:
    def __init__(self) -> None:
@@ -52,11 +60,32 @@ class BlueLinky(Generic[T, VEHICLE_TYPE], EventEmitter):
       else:
          merged.update(getattr(config, "__dict__", {}))
 
-      self.config: Any = merged
+      cfg_obj = BlueLinkyConfig(
+         username = merged.get("username"),
+         password = merged.get("password"),
+         region = merged.get("region"),
+         brand = merged.get("brand", "hyundai"),
+         autoLogin = merged.get("autoLogin"),
+         pin = merged.get("pin"),
+         vin = merged.get("vin"),
+         vehicleId = merged.get("vehicleId"),
+      )
+
+      home = merged.get("home")
+
+      if isinstance(home, (list, tuple)) and len(home) >= 2:
+         lat = float(home[0])
+         lon = float(home[1])
+         alt = float(home[2]) if len(home) > 2 and home[2] is not None else 0.0
+         cfg_obj.home = HomeLocation(lat, lon, alt)
+      else:
+         cfg_obj.home = None
+
+      self.config: BlueLinkyConfig = cfg_obj
       self.controller: SessionController
       self.vehicles: List[VEHICLE_TYPE] = []
 
-      region = self.config.get("region")
+      region = self.config.region
 
       if region == REGIONS.EU:
          self.controller = EuropeanController(self.config)  # type: ignore[arg-type]
@@ -71,8 +100,8 @@ class BlueLinky(Generic[T, VEHICLE_TYPE], EventEmitter):
       else:
          raise Exception("Your region is not supported yet.")
 
-      if self.config.get("autoLogin") is None:
-         self.config["autoLogin"] = True
+      if self.config.autoLogin is None:
+         self.config.autoLogin = True
 
       self.onInit()
 
@@ -80,7 +109,7 @@ class BlueLinky(Generic[T, VEHICLE_TYPE], EventEmitter):
       return super().on(event, fnc)  # type: ignore[return-value]
 
    def onInit(self) -> None:
-      if self.config.get("autoLogin"):
+      if self.config.autoLogin:
          logger.debug("Bluelinky is logging in automatically, to disable use autoLogin: false")
          self.login()
 
