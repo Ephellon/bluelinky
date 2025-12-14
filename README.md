@@ -102,11 +102,11 @@ The JSON file must respect [this format](https://github.com/neoPix/bluelinky-sta
     - `python -m bluelinky report`
 - tripInfo
     - `python -m bluelinky history`
-- EV: driveHistory
+- (**TODO**) EV: driveHistory
     - `python -m bluelinky history all`
-- EV: getChargeTargets
+- (**TODO**) EV: getChargeTargets
     - `python -m bluelinky charge --targets`
-- EV: setChargeLimits
+- (**TODO**) EV: setChargeLimits
     - `python -m bluelinky charge --max 80`
 
 ## Supported Regions
