@@ -188,8 +188,27 @@ def pick_vehicle(client: BlueLinky, cfg_data: dict):
    return vehicles[0]
 
 
+def _status_source_from_arg(value: str) -> str:
+   normalized = (value or "parsed").strip().lower()
+   if normalized in ("parsed", "full", "cached"):
+      return normalized
+   raise argparse.ArgumentTypeError("--from must be one of: parsed, full, cached")
+
+
 def cmd_status(client, vehicle, args):
-   status = vehicle.status()
+   source = getattr(args, "from", "parsed")
+
+   try:
+      if source == "parsed":
+         status = vehicle.status(VehicleStatusOptions(refresh=True, parsed=True))
+      elif source == "full":
+         status = vehicle.fullStatus(VehicleStatusOptions(refresh=True, parsed=False))
+      else:
+         status = vehicle.status(VehicleStatusOptions(refresh=False, parsed=True))
+   except Exception as exc:
+      print(str(exc))
+      return 1
+
    if status is None:
       print("No status returned.")
       return 1
@@ -226,6 +245,55 @@ def cmd_flash(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    res = vehicle.light()
    print("Lights command sent:", res)
    return 0
+
+
+def cmd_odometer(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   try:
+      odometer = vehicle.odometer()
+      if odometer is None:
+         print("No odometer returned.")
+         return 1
+
+      try:
+         data = asdict(odometer)
+      except TypeError:
+         data = odometer
+
+      print(json.dumps(data, indent=2, default=str))
+      return 0
+   except Exception as exc:
+      print(str(exc))
+      return 1
+
+
+def cmd_charge(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   try:
+      res = vehicle.startCharge()
+      print(res)
+      return 0
+   except Exception as exc:
+      print(str(exc))
+      return 1
+
+
+def cmd_report(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   try:
+      report = vehicle.monthlyReport()
+      print(json.dumps(report, indent=2, default=str))
+      return 0
+   except Exception as exc:
+      print(str(exc))
+      return 1
+
+
+def cmd_history(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   try:
+      history = vehicle.tripInfo()
+      print(json.dumps(history, indent=2, default=str))
+      return 0
+   except Exception as exc:
+      print(str(exc))
+      return 1
 
 
 def _heat_mode_from_arg(value: Optional[str]) -> tuple[bool, bool, str]:
@@ -474,11 +542,13 @@ def build_parser() -> argparse.ArgumentParser:
 
    _list       = sub.add_parser("list", help="List all vehicles.")
    _status     = sub.add_parser("status", help="Show vehicle status.")
+   _status.add_argument("--from", dest="from", type=_status_source_from_arg, default="parsed", help="Status source: parsed (default), full, cached")
    _lock       = sub.add_parser("lock", help="Lock the vehicle.")
    _unlock     = sub.add_parser("unlock", help="Unlock the vehicle.")
    _horn       = sub.add_parser("horn", help="Honk the horn.")
    _flash      = sub.add_parser("flash", help="Flash the lights.")
    _locate     = sub.add_parser("locate", help="Show last known vehicle location.")
+   _odometer   = sub.add_parser("odometer", help="Show the vehicle odometer.")
    _home       = sub.add_parser("home", help="Show the saved (Home) vehicle location.")
    _home_sub   = _home.add_subparsers(dest="home_command", required=False)
    _home_set   = _home_sub.add_parser("set", help="Set the vehicle's current location as the saved (Home) location.")
@@ -487,6 +557,9 @@ def build_parser() -> argparse.ArgumentParser:
    _start.add_argument("--time", type=_parse_time_arg, help="Ignition duration in minutes (1-30)")
    _start.add_argument("--heat", type=_parse_heat_arg, help="Enable heated features (yes/on/true/all/defrost)")
    _stop       = sub.add_parser("stop", help="Remote stop (turn off).")
+   _charge     = sub.add_parser("charge", help="Start charging the vehicle.")
+   _report     = sub.add_parser("report", help="Get the monthly report.")
+   _history    = sub.add_parser("history", help="Get trip/usage history.")
 
    return parser
 
@@ -538,10 +611,18 @@ def main(argv: Optional[list[str]] = None) -> int:
       return cmd_flash(client, vehicle, args)
    if cmd == "locate":
       return cmd_locate(client, vehicle, args)
+   if cmd == "odometer":
+      return cmd_odometer(client, vehicle, args)
    if cmd == "start":
       return cmd_start(client, vehicle, args)
    if cmd == "stop":
       return cmd_stop(client, vehicle, args)
+   if cmd == "charge":
+      return cmd_charge(client, vehicle, args)
+   if cmd == "report":
+      return cmd_report(client, vehicle, args)
+   if cmd == "history":
+      return cmd_history(client, vehicle, args)
 
    parser.error(f"Unknown command: {cmd!r}")
    return 2
