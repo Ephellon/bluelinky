@@ -76,12 +76,12 @@ def make_client(cfg_data: dict) -> BlueLinky:
 def pick_vehicle(client: BlueLinky, cfg_data: dict):
    vin = cfg_data.get("vin")
    if vin:
-      vehicle = client.get_vehicle(vin)
+      vehicle = client.getVehicle(vin)
       if vehicle is None:
          raise RuntimeError(f"Vehicle with VIN {vin!r} not found.")
       return vehicle
 
-   vehicles = client.get_vehicles()
+   vehicles = client.getVehicles()
    if not vehicles:
       raise RuntimeError("No vehicles found on this account.")
    if len(vehicles) > 1:

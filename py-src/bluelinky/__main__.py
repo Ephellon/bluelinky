@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from .client import BlueLinky
+from . import BlueLinky
 from .constants import Region
 from .interfaces import BlueLinkyConfig, Brand
 from .logger import logger

@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import asdict
-from typing import Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 from urllib.parse import urlencode
 
 import requests
@@ -23,7 +23,9 @@ from ..interfaces.common_interfaces import (
 from ..interfaces.american_interfaces import RequestHeaders
 from ..logger import logger
 from .vehicle import Vehicle
-from ..controllers.american_controller import AmericanController
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.american_controller import AmericanController
 
 
 class AmericanVehicle(Vehicle):

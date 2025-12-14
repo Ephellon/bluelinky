@@ -3,9 +3,13 @@
 from dataclasses import dataclass
 from typing import Callable, Dict, Optional, TypedDict, Union
 
-from ..constants import REGIONS
-from ..controllers.australia_controller import AustraliaBlueLinkyConfig
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.australia_controller import AustraliaBlueLinkyConfig
 from ..interfaces.common_interfaces import Brand
+
+REGION_CODE = "AU"
 from .stamps import StampMode, getStampGenerator
 
 
@@ -82,7 +86,7 @@ def getHyundaiEnvironment(*, stampMode: StampMode, stampsFile: Optional[str] = N
          appId=appId,
          brand="hyundai",
          mode=stampMode,
-         region=REGIONS.AU,
+         region=REGION_CODE,
          stampHost="https://raw.githubusercontent.com/neoPix/bluelinky-stamps/master/",
          stampsFile=stampsFile,
       ),
@@ -109,7 +113,7 @@ def getKiaEnvironment(*, stampMode: StampMode, stampsFile: Optional[str] = None)
          appId=appId,
          brand="kia",
          mode=stampMode,
-         region=REGIONS.AU,
+         region=REGION_CODE,
          stampHost="https://raw.githubusercontent.com/neoPix/bluelinky-stamps/master/",
          stampsFile=stampsFile,
       ),

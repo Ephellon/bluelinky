@@ -3,7 +3,7 @@ from http.cookiejar import CookieJar
 from typing import Any, Dict, Optional
 
 from ...constants.europe import EULanguages, EuropeanBrandEnvironment
-from .authStrategy import AuthStrategy, Code, initSession
+from .auth_strategy import AuthStrategy, Code, initSession
 from urllib.parse import urlparse, parse_qs
 
 

@@ -1,10 +1,9 @@
 ﻿from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from ..constants import REGIONS
-from ..controllers.controller import SessionController
 from ..interfaces.common_interfaces import (
    BlueLinkyConfig,
    FullVehicleStatus,
@@ -16,6 +15,9 @@ from ..interfaces.common_interfaces import (
    VehicleStatus,
    VehicleStatusOptions,
 )
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.controller import SessionController
 
 
 class Vehicle(ABC):

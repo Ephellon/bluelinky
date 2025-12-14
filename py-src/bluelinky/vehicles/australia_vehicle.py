@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, Union, overload
 
 from bluelinky.constants import (
    DEFAULT_VEHICLE_STATUS_OPTIONS,
@@ -10,7 +10,6 @@ from bluelinky.constants import (
    REGIONS,
    ChargeTarget,
 )
-from bluelinky.controllers.australia_controller import AustraliaController
 from bluelinky.interfaces.common_interfaces import (
    DeepPartial,
    EVChargeModeTypes,
@@ -39,6 +38,9 @@ from bluelinky.logger import logger
 from bluelinky.tools.common_tools import ManagedBluelinkyError, manageBluelinkyError
 from bluelinky.util import addMinutes, celciusToTempCode, parseDate, tempCodeToCelsius
 from bluelinky.vehicles.vehicle import Vehicle
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.australia_controller import AustraliaController
 
 T = TypeVar("T", bound=Dict[str, Any])
 
@@ -257,7 +259,7 @@ class AustraliaVehicle(Vehicle):
                "temperatureSetpoint": tempCodeToCelsius(
                   REGIONS.AU, (((vehicleStatus or {}).get("airTemp") or {}).get("value"))
                ),
-               "temperatureUnit": (((vehicleStatus or {}).get("airTemp") or {}).get("unit"),
+               "temperatureUnit": ((vehicleStatus or {}).get("airTemp") or {}).get("unit"),
             },
             "engine": {
                "ignition": (vehicleStatus or {}).get("engine") if vehicleStatus else None,

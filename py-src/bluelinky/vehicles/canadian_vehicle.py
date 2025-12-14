@@ -1,7 +1,7 @@
 ﻿from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from ..constants import (
    DEFAULT_VEHICLE_STATUS_OPTIONS,
@@ -26,7 +26,9 @@ from ..logger import logger
 from ..tools.common_tools import ManagedBluelinkyError
 from ..util import celciusToTempCode, parseDate
 from .vehicle import Vehicle
-from ..controllers.canadian_controller import CanadianController
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..controllers.canadian_controller import CanadianController
 
 
 @dataclass

@@ -2,10 +2,12 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, List, TypeVar
+from typing import TYPE_CHECKING, Generic, List, TypeVar
 
 from ..interfaces.common_interfaces import BlueLinkyConfig, Session
-from ..vehicles.vehicle import Vehicle
+
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+   from ..vehicles.vehicle import Vehicle
 
 T = TypeVar("T", bound=BlueLinkyConfig)
 

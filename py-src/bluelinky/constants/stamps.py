@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import base64
 import json
@@ -6,14 +6,15 @@ import math
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Literal, Optional
 
 import requests
 
 from ..interfaces.common_interfaces import Brand
-from ..constants import REGIONS
 from .australia_cfb import hyundaiCFB as australiaHyundaiCFB, kiaCFB as australiaKiaCFB
 from .europe_cfb import hyundaiCFB as europeHyundaiCFB, kiaCFB as europeKiaCFB
+
+RegionCode = Literal["US", "CA", "EU", "CN", "AU"]
 
 
 class StampMode(str, Enum):
@@ -104,15 +105,15 @@ def _xorBuffers(a: bytes, b: bytes) -> bytes:
    return bytes([a[i] ^ b[i] for i in range(len(a))])
 
 
-def _getCFB(brand: Brand, region: REGIONS) -> bytes:
-   if region == REGIONS.AU:
+def _getCFB(brand: Brand, region: RegionCode) -> bytes:
+   if region == "AU":
       return australiaKiaCFB if brand == "kia" else australiaHyundaiCFB
-   if region == REGIONS.EU:
+   if region == "EU":
       return europeKiaCFB if brand == "kia" else europeHyundaiCFB
    raise ValueError("Local stamp generation is only supported in Australia and Europe")
 
 
-def getStampFromCFB(appId: str, brand: Brand, region: REGIONS) -> Callable[[], str]:
+def getStampFromCFB(appId: str, brand: Brand, region: RegionCode) -> Callable[[], str]:
    cfb = _getCFB(brand, region)
 
    def _generator() -> str:
@@ -128,7 +129,7 @@ def getStampGenerator(
    appId: str,
    brand: Brand,
    mode: StampMode,
-   region: REGIONS,
+   region: RegionCode,
    stampHost: str,
    stampsFile: Optional[str] = None,
 ) -> Callable[[], str]:

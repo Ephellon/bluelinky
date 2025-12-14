@@ -1,4 +1,3 @@
-﻿```python
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, TypedDict, TypeVar, Union
 
-from ..constants import REGION
+REGION = Literal["US", "CA", "EU", "CN", "AU"]
 
 
 Brand = Literal["kia", "hyundai"]
@@ -18,7 +17,7 @@ class BlueLinkyConfig:
    username: Optional[str]
    password: Optional[str]
    region: Optional[REGION]
-   brand: Brand
+   brand: Brand = "hyundai"
    autoLogin: Optional[bool] = None
    pin: Optional[str] = None
    vin: Optional[str] = None
@@ -303,4 +302,3 @@ class VehicleDayTrip:
    durations: Dict[str, int]
    speed: Dict[str, int]
    trips: List[Dict[str, Any]]
-```

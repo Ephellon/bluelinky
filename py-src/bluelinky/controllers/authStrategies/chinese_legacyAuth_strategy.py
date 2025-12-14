@@ -7,7 +7,7 @@ from urllib.parse import urlparse, parse_qs
 import requests
 
 from ...constants.china import ChineseBrandEnvironment
-from .china_authStrategy import AuthStrategy, Code, initSession
+from .china_auth_strategy import AuthStrategy, Code, initSession
 
 
 class _LoginUser(TypedDict):
