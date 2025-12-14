@@ -1,0 +1,197 @@
+# py-src/bluelinky/cli.py
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+from dataclasses import asdict
+from pathlib import Path
+from typing import Optional
+
+from . import BlueLinky, Region
+from .interfaces import BlueLinkyConfig
+
+
+DEFAULT_CONFIG_PATHS = [
+   Path(os.getenv("BLUELINKY_CONFIG", "")),
+   Path.home() / ".bluelinky" / "config.json",
+   Path("config.json"),
+]
+
+
+log = logging.getLogger("bluelinky.cli")
+
+
+def load_config(path: Optional[str] = None) -> dict:
+   """
+   Load config from JSON. Resolution order:
+   1. --config argument (if given)
+   2. BLUELINKY_CONFIG env var
+   3. ~/.bluelinky/config.json
+   4. ./config.json
+   """
+   candidates: list[Path] = []
+
+   if path:
+      candidates.append(Path(path))
+
+   env_path = os.getenv("BLUELINKY_CONFIG")
+   if env_path:
+      candidates.append(Path(env_path))
+
+   candidates.extend(DEFAULT_CONFIG_PATHS[1:])
+
+   for p in candidates:
+      if p and p.is_file():
+         with p.open("r", encoding="utf-8") as f:
+            return json.load(f)
+
+   raise FileNotFoundError(
+      "No config file found. "
+      "Tried: --config, BLUELINKY_CONFIG, ~/.bluelinky/config.json, ./config.json"
+   )
+
+
+def make_client(cfg_data: dict) -> BlueLinky:
+   region_value = cfg_data.get("region", "US")
+   try:
+      region = Region[region_value.upper()]
+   except KeyError:
+      raise ValueError(f"Unknown region: {region_value!r}")
+
+   cfg = BlueLinkyConfig(
+      username=cfg_data["username"],
+      password=cfg_data["password"],
+      pin=str(cfg_data["pin"]),
+      brand=cfg_data.get("brand", "hyundai"),
+      region=region,
+      vin=cfg_data.get("vin"),
+   )
+
+   return BlueLinky(cfg)
+
+
+def pick_vehicle(client: BlueLinky, cfg_data: dict):
+   vin = cfg_data.get("vin")
+   if vin:
+      vehicle = client.get_vehicle(vin)
+      if vehicle is None:
+         raise RuntimeError(f"Vehicle with VIN {vin!r} not found.")
+      return vehicle
+
+   vehicles = client.get_vehicles()
+   if not vehicles:
+      raise RuntimeError("No vehicles found on this account.")
+   if len(vehicles) > 1:
+      log.warning("Multiple vehicles found; using the first one.")
+   return vehicles[0]
+
+
+def cmd_status(client, vehicle, args):
+   status = vehicle.status()
+   if status is None:
+      print("No status returned.")
+      return 1
+
+   try:
+      data = asdict(status)
+   except TypeError:
+      data = status
+
+   print(json.dumps(data, indent=2, default=str))
+   return 0
+
+
+def cmd_lock(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   res = vehicle.lock()
+   print("Lock command sent:", res)
+   return 0
+
+
+def cmd_unlock(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   res = vehicle.unlock()
+   print("Unlock command sent:", res)
+   return 0
+
+
+def cmd_horn(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   res = vehicle.horn()
+   print("Horn command sent:", res)
+   return 0
+
+
+def cmd_flash(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   # adjust name if your API uses `lights()` / `light()` / `flash()`
+   res = vehicle.light()
+   print("Lights command sent:", res)
+   return 0
+
+
+def cmd_locate(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
+   res = vehicle.location()
+   print(json.dumps(res, indent=2, default=str))
+   return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+   p = argparse.ArgumentParser(
+      prog="bluelinky",
+      description="BlueLinky Python CLI for Hyundai/Kia vehicles",
+   )
+   p.add_argument(
+      "--config",
+      "-c",
+      help="Path to config JSON (otherwise use BLUELINKY_CONFIG or default locations).",
+   )
+   p.add_argument(
+      "--debug",
+      action="store_true",
+      help="Enable debug logging.",
+   )
+
+   sub = p.add_subparsers(dest="command", required=True)
+
+   sub.add_parser("status", help="Show vehicle status.")
+   sub.add_parser("lock", help="Lock the vehicle.")
+   sub.add_parser("unlock", help="Unlock the vehicle.")
+   sub.add_parser("horn", help="Honk the horn.")
+   sub.add_parser("flash", help="Flash the lights.")
+   sub.add_parser("locate", help="Show last known vehicle location.")
+
+   return p
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+   parser = build_parser()
+   args = parser.parse_args(argv)
+
+   logging.basicConfig(
+      level=logging.DEBUG if args.debug else logging.INFO,
+      format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+   )
+
+   cfg_data = load_config(args.config)
+   client = make_client(cfg_data)
+   vehicle = pick_vehicle(client, cfg_data)
+
+   cmd = args.command
+
+   print(f"Attempting to run '{cmd}' command...")
+
+   if cmd == "status":
+      return cmd_status(client, vehicle, args)
+   if cmd == "lock":
+      return cmd_lock(client, vehicle, args)
+   if cmd == "unlock":
+      return cmd_unlock(client, vehicle, args)
+   if cmd == "horn":
+      return cmd_horn(client, vehicle, args)
+   if cmd == "flash":
+      return cmd_flash(client, vehicle, args)
+   if cmd == "locate":
+      return cmd_locate(client, vehicle, args)
+
+   parser.error(f"Unknown command: {cmd!r}")
+   return 2
