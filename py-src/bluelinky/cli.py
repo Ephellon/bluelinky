@@ -251,7 +251,7 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    try:
       heat_on, defrost_on, heat_mode = _heat_mode_from_arg(getattr(args, "heat", None))
 
-      target_unit = _target_unit_for_vehicle(vehicle)
+      target_unit = _target_unit_for_vehicle(client)
       default_temp = 72 if target_unit == "F" else 22
 
       temp_value: Optional[int] = None
@@ -269,6 +269,9 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
             temp_unit = target_unit
 
       hvac_on = bool((getattr(args, "temp", None) is not None) or heat_on or defrost_on)
+      if hvac_on and temp_value is None:
+         temp_value = default_temp
+
       duration = getattr(args, "time", None)
       if duration is None:
          duration = 10
@@ -280,7 +283,7 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
          defrost=defrost_on,
          heatedFeatures=1 if heat_on else 0,
          unit=temp_unit,
-         seatClimateSettings=None,
+         seatClimateSettings={},
       )
 
       log.info(
