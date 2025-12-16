@@ -690,6 +690,7 @@ def build_parser() -> argparse.ArgumentParser:
 
    sub = parser.add_subparsers(dest="command", required=False)
 
+   _whoami     = sub.add_parser("whoami", help="Prints the currently loaded configuration summary.")
    _list       = sub.add_parser("list", help="List all vehicles.")
    _status     = sub.add_parser("status", help="Show vehicle status.")
    _status.add_argument("--from", dest="from", type=_status_source_from_arg, default="parsed", help="Status source: parsed (default), full, cached")
@@ -744,6 +745,8 @@ def main(argv: Optional[list[str]] = None) -> int:
    print(f"Attempting to run '{cmd}' command...")
 
    # Thes commands do not require selecting a specific vehicle
+   if cmd == "whoami":
+      return print_config_summary(cfg_path, cfg_data, args)
    if cmd == "list":
       return cmd_list(client, args)
    if cmd == "home":
