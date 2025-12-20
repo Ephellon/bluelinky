@@ -88,8 +88,8 @@ def _convert_temperature(value: int, from_unit: str, to_unit: str) -> int:
 
 def _clamp_temperature(value: int, unit: str) -> int:
    if unit == "F":
-      return max(61, min(83, value))
-   return max(16, min(28, value))
+      return min(max(value, 61), 83)
+   return min(max(value, 16), 28)
 
 
 def _parse_temperature_arg(value: str) -> tuple[int, str]:
@@ -112,9 +112,9 @@ def _parse_temperature_arg(value: str) -> tuple[int, str]:
 
    clamped = int(round(temp))
    if unit == "F":
-      clamped = max(61, min(83, clamped))
+      clamped = min(max(clamped, 61), 83)
    else:
-      clamped = max(16, min(28, clamped))
+      clamped = min(max(clamped, 16), 28)
 
    return clamped, unit
 
@@ -125,17 +125,19 @@ def _parse_time_arg(value: str) -> int:
    except ValueError as exc:
       raise argparse.ArgumentTypeError(f"invalid time value: {value!r}") from exc
 
-   return max(1, min(30, minutes))
+   return min(max(minutes, 1), 30)
 
 
 def _parse_heat_arg(value: str) -> str:
    normalized = str(value).strip().lower()
    if normalized in ("yes", "on", "true", "1"):
       return "on"
-   if normalized == "all":
+   if normalized in ("all"):
       return "all"
-   if normalized == "defrost":
+   if normalized in ("defrost"):
       return "defrost"
+   if normalized in ("no", "off", "false", "0"):
+      return "off"
 
    raise argparse.ArgumentTypeError("--heat must be one of: yes, on, true, 1, all, defrost")
 
@@ -473,7 +475,7 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
          duration=duration,
          temperature=temp_value if temp_value is not None else default_temp,
          defrost=defrost_on,
-         heatedFeatures=1 if heat_on else 0,
+         heatedFeatures=heat_on,
          unit=temp_unit,
          seatClimateSettings={},
       )
@@ -708,7 +710,7 @@ def build_parser() -> argparse.ArgumentParser:
    _start      = sub.add_parser("start", help="Remote start (turn on) with optional climate settings.")
    _start.add_argument("--temp", type=_parse_temperature_arg, help="Target temperature (e.g. 25C or 77F)")
    _start.add_argument("--time", type=_parse_time_arg, help="Ignition duration in minutes (1-30)")
-   _start.add_argument("--heat", type=_parse_heat_arg, help="Enable heated features (yes/on/true/all/defrost)")
+   _start.add_argument("--heat", type=_parse_heat_arg, help="Enable heated features (truthy/all/defrost/falsy)")
    _stop       = sub.add_parser("stop", help="Remote stop (turn off).")
    _charge     = sub.add_parser("charge", help="Start charging the vehicle or manage EV charge settings.")
    charge_mode = _charge.add_mutually_exclusive_group()
