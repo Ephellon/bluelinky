@@ -442,7 +442,7 @@ def cmd_start(client: BlueLinky, vehicle, args: argparse.Namespace) -> int:
    try:
       heat_on, defrost_on, heat_mode = _heat_mode_from_arg(getattr(args, "heat", None))
 
-      target_unit = _target_unit_for_vehicle(client)
+      target_unit = _target_unit_for_vehicle(vehicle)
       highest_temp = 83 if target_unit == "F" else 28
       default_temp = 72 if target_unit == "F" else 22
       lowest_temp  = 61 if target_unit == "F" else 16

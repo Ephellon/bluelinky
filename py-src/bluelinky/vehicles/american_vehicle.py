@@ -188,17 +188,20 @@ class AmericanVehicle(Vehicle):
       seatClimateOptions = result if len(result.keys()) > 0 else None
       logger.debug(f"Processed seatClimateOptions: {json.dumps(seatClimateOptions)}")
 
+      air_unit = 0 if mergedConfig['unit'].upper() == 'C' else 1
+
       body: Dict[str, Any] = {
          "Ims": 0,
          "airCtrl": int(bool(mergedConfig.get("hvac"))),
          "airTemp": {
-            "unit": 1,
+            "unit": air_unit,
             "value": f"{mergedConfig.get('temperature')}",
          },
          "defrost": mergedConfig.get("defrost"),
          "heating1": mergedConfig.get("heatedFeatures"),
          "username": self.userConfig.username,
          "vin": self.vehicleConfig.vin,
+         "hvacTempType": air_unit,
       }
 
       if not gen2ev:
